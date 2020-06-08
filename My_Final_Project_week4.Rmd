@@ -1,0 +1,98 @@
+---
+title: "myProjectWeek4"
+author: "Radhika Vikas Kulkarni"
+date: "June 7, 2020"
+output: html_document
+---
+
+## Final Project Summary:
+    This project aims to foresee the way by which they did the exercise. The feature "classe" in the     
+    training dataset identifies the same. I have used Random Forest classifier to classify the exercise  
+    activities into 5 classes -A,B,C,D,E.
+    
+    I have used training and testing datasets from the source:  
+    [Source](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har). 
+    
+    I have followed following steps:
+    
+    * 1.	Loading the necessary R packages.
+    * 2.	Downloading the training dataset from    
+        [Training Data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+    * 3.	Downloading the testing dataset from
+         [Testing Data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+    * 4.	Data cleaning and dimensionality reduction. 
+        I removed the first 7 features as  1)X, 2)user_name, 3)raw_timestamp_part_1, 
+        4)raw_timestamp_part_2, 5)cvtd_timestamp, 6)new_window, 7) num_window
+    * 5.	I have partitioned training dataset into 80% Training and 20% Validation Data set.
+    * 6.	I have used Random Forest classifier with 5-Fold cross validation to create my model.
+    * 7.	I have used the trained model to predict the classes of validation data set and produced the 
+        confusion matrix for the validation data set.
+    * 8.	Finally I used the same model to predict the classes of given testing (Quiz) dataset. 
+
+
+```{r}
+# clear all the session parameters
+rm(list=ls());
+gc();
+
+library("randomForest")
+
+library("caret")
+
+
+# Setting of the URL for the download of the training and testing datasets
+# Source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har
+
+urlTrainData <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+urlTestData  <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+# Downloading the training and testing datasets
+train <- read.csv(url(urlTrainData),na.strings = c(""," ","?","NA",NA,"#DIV/0!"))
+test  <- read.csv(url(urlTestData),na.strings = c(""," ","?","NA",NA,"#DIV/0!"))
+
+
+```
+```{r}
+# Cleaning data sets by removing columns with values=NA
+train <- train[,colSums(is.na(train)) == 0]
+test <- test[,colSums(is.na(test)) == 0]
+dim(train)
+dim(test)
+
+# Dimentionality reduction- Removing first 7 features as 1)X, 2)user_name, 3)raw_timestamp_part_1, 4)raw_timestamp_part_2, 5)cvtd_timestamp, 6)new_window, 7) num_window 
+trainRed <- train[,-c(1:7)]
+testRed <- test[,-c(1:7)]
+dim(trainRed)
+dim(testRed)
+
+# Partitioning of training data into 80% Training and 20% Validation Data set
+trainPart <- createDataPartition(trainRed$classe, p = 0.8, list = FALSE)
+trainFold <- trainRed[trainPart,]
+validFold <- trainRed[-trainPart,]
+dim(trainFold)
+dim(validFold)
+
+```
+```{r}
+# RandomForest Classification Model with 5-Fold Cross Validation
+set.seed(200)
+controlRF <- trainControl(method="cv", number=5, verboseIter=FALSE)
+myModelRF <- train(classe ~ ., data=trainFold, method="rf",
+                          trControl=controlRF)
+myModelRF$finalModel
+
+```
+
+```{r}
+# Validation Results
+predValid <- predict(myModelRF, newdata=validFold)
+confusionMatrix(predValid, validFold$classe)                 
+
+```
+```{r}
+# Predicting the the Test(Quiz) data using the trained model of RandomForest- myModelRF
+predTEST <- predict(myModelRF, newdata=testRed)
+predTEST
+
+```
+
